@@ -16,9 +16,9 @@ export class Home extends Component {
   }
 
   static defaultProps = {
-    country: "in",
+    country: "us",
     pageSize: 9,
-    category: "science",
+    category: "general",
   };
 
   static propTypes = {
@@ -27,23 +27,55 @@ export class Home extends Component {
     category: PropTypes.string,
   };
 
+  // Helper function to safely fetch JSON
+  safeFetchJson = async (url) => {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        throw new Error(`HTTP Error: ${response.status} ${response.statusText}`);
+      }
+      return await response.json();
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      throw error;
+    }
+  };
+
+  // Function to fetch fresh news from NewsAPI and store in MongoDB
+  fetchFreshNews = async () => {
+    try {
+      const response = await this.safeFetchJson(
+        `http://localhost:5000/api/fetch-news?category=${this.props.category}&country=${this.props.country}`
+      );
+      if (response.success) {
+        console.log(`Fetched ${response.count} fresh articles for ${this.props.category}`);
+        // After fetching fresh news, get the stored news
+        this.updatePage();
+      }
+    } catch (error) {
+      console.error("Error fetching fresh news:", error);
+    }
+  };
+
   fetchMoreData = async () => {
     this.setState({ loading: true });
-    const url = `https://newsapi.org/v2/top-headlines?country=${
-      this.props.country
-    }&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${
-      this.state.page + 1
-    }&pageSize=${this.props.pageSize}`;
+    const url = `http://localhost:5000/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page + 1}&pageSize=${this.props.pageSize}`;
 
     try {
-      let data = await fetch(url);
-      let parsedData = await data.json();
-      this.setState({
-        articles: this.state.articles.concat(parsedData.articles),
-        totalResults: parsedData.totalResults,
-        loading: false,
-        page: this.state.page + 1,
-      });
+      let parsedData = await this.safeFetchJson(url);
+      
+      if (parsedData.status === "ok" && parsedData.articles.length > 0) {
+        this.setState({
+          articles: this.state.articles.concat(parsedData.articles),
+          totalResults: parsedData.totalResults,
+          loading: false,
+          page: this.state.page + 1,
+        });
+      } else {
+        // If no more articles, try to fetch fresh news
+        await this.fetchFreshNews();
+        this.setState({ loading: false });
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       this.setState({ loading: false });
@@ -52,26 +84,36 @@ export class Home extends Component {
 
   updatePage = async () => {
     this.props.setProgress(0);
-    const url = `https://newsapi.org/v2/top-headlines?country=${this.props.country}&category=${this.props.category}&apiKey=${this.props.apiKey}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+    const url = `http://localhost:5000/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     this.props.setProgress(10);
 
     this.setState({ loading: true });
 
     try {
-      let data = await fetch(url);
-      let parsedData = await data.json();
-      console.log(parsedData);
+      let parsedData = await this.safeFetchJson(url);
+      
+      if (parsedData.status === "ok") {
+        if (parsedData.articles.length === 0) {
+          // No articles in database, fetch fresh news first
+          console.log("No articles found in database, fetching fresh news...");
+          await this.fetchFreshNews();
+          return;
+        }
+        
+        console.log("Fetched from MongoDB:", parsedData.articles.length);
+        document.title = "News-App";
+        this.props.setProgress(70);
 
-      document.title = "News-App";
-      this.props.setProgress(70);
+        this.setState({
+          articles: parsedData.articles,
+          totalResults: parsedData.totalResults,
+          loading: false,
+        });
 
-      this.setState({
-        articles: parsedData.articles,
-        totalResults: parsedData.totalResults,
-        loading: false,
-      });
-
-      this.props.setProgress(100);
+        this.props.setProgress(100);
+      } else {
+        throw new Error("Failed to fetch news from database");
+      }
     } catch (error) {
       console.error("Error fetching data:", error);
       this.setState({ loading: false });
@@ -85,8 +127,8 @@ export class Home extends Component {
 
   render() {
     return (
-      <div className="bg-secondary-subtle">
-        <h1 className="text-center  fw-bold ">News - Top Headlines</h1>
+      <div className="bg-secondary-subtle pt-5">
+        <h1 className="text-center fw-bold">News - Top Headlines</h1>
         {this.state.loading && <Spinner />}
         <InfiniteScroll
           dataLength={this.state.articles?.length || 0}
