@@ -3,8 +3,8 @@ services:
     name: newsapp
     env: node
     plan: free
-    buildCommand: npm install && npm run build
-    startCommand: npm run server
+    buildCommand: "npm run render-build"
+    startCommand: "npm run server"
     envVars:
       - key: NODE_ENV
         value: production

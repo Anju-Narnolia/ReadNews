@@ -29,7 +29,8 @@
     "eject": "react-scripts eject",
     "server": "node server.js",
     "dev": "concurrently \"npm run server\" \"react-scripts start\"",
-    "init-db": "node init-db.js"
+    "init-db": "node init-db.js",
+    "render-build": "npm install && npm run build"
   },
   "eslintConfig": {
     "extends": [
