@@ -45,7 +45,7 @@ export class Home extends Component {
   fetchFreshNews = async () => {
     try {
       const response = await this.safeFetchJson(
-        `http://localhost:5000/api/fetch-news?category=${this.props.category}&country=${this.props.country}`
+        `/api/fetch-news?category=${this.props.category}&country=${this.props.country}`
       );
       if (response.success) {
         console.log(`Fetched ${response.count} fresh articles for ${this.props.category}`);
@@ -59,7 +59,7 @@ export class Home extends Component {
 
   fetchMoreData = async () => {
     this.setState({ loading: true });
-    const url = `http://localhost:5000/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page + 1}&pageSize=${this.props.pageSize}`;
+    const url = `/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page + 1}&pageSize=${this.props.pageSize}`;
 
     try {
       let parsedData = await this.safeFetchJson(url);
@@ -84,7 +84,7 @@ export class Home extends Component {
 
   updatePage = async () => {
     this.props.setProgress(0);
-    const url = `http://localhost:5000/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
+    const url = `/api/get-news?category=${this.props.category}&country=${this.props.country}&page=${this.state.page}&pageSize=${this.props.pageSize}`;
     this.props.setProgress(10);
 
     this.setState({ loading: true });
